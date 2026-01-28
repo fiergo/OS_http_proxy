@@ -10,6 +10,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <errno.h>
+#include <ctype.h>
 
 #define DEFAULT_PROXY_PORT 80
 #define BUFFER_SIZE 4096
@@ -73,34 +74,51 @@ int extract_host_from_request(const char *request, char *host, size_t host_len) 
 
 // Функция для извлечения порта из HTTP-запроса
 void extract_port_from_request(const char *request, int *port) {
+    // extract_host_from_request успешно сработал до этого, нет смысла заново проверять
     char *host_start = strstr(request, "Host: ");
-    if (!host_start) {
-        *port = 80; // Порт по умолчанию для HTTP
-    }
-    
     host_start += 6;
     char *host_end = strstr(host_start, "\r\n");
-    if (!host_end) {
-        *port = 80;
-    }
     
     char *port_ptr = strchr(host_start, ':');
-    if (!port_ptr || port_ptr > host_end) {
-        *port = 80;
+    if (!port_ptr || port_ptr >= host_end) {
+        // Нет порта - используем по умолчанию
+        *port = DEFAULT_PROXY_PORT;
+        return;
     }
     
-    port_ptr++; // Пропускаем ':'
-    char port_str[6] = {0};
-    size_t port_len = host_end - port_ptr;
-    if (port_len > 5) port_len = 5;
+    port_ptr++;
+    while (port_ptr < host_end && (*port_ptr == ' ' || *port_ptr == '\t')) {
+        port_ptr++;
+    }
     
-    strncpy(port_str, port_ptr, port_len);
+    // Проверяем что остались символы для порта
+    if (port_ptr >= host_end) {
+        *port = DEFAULT_PROXY_PORT;
+        return;
+    }
+    
+    char port_str[6] = {0};
+    size_t port_len = 0;
+    while (port_len < 5 && 
+           port_ptr + port_len < host_end && 
+           isdigit(port_str[port_len] = port_ptr[port_len])) {
+        port_len++;
+    }
+    
+    if (port_len == 0) {
+        // Нет цифр - невалидный порт
+        *port = DEFAULT_PROXY_PORT;
+        return;
+    }
+    
     port_str[port_len] = '\0';
     
     *port = atoi(port_str);
     if (*port <= 0 || *port > 65535) {
-        *port = 80;
+        *port = DEFAULT_PROXY_PORT;  // Невалидный порт → по умолчанию
     }
+    
+    return;
 }
 
 // Функция для нормализации запроса до HTTP/1.0

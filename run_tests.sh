@@ -27,17 +27,6 @@ error() {
     exit 1
 }
 
-# Удаляем неиспользуемую переменную из исходного кода прокси
-remove_unused_response() {
-    if [ -f "httpproxy.c" ]; then
-        # Удаляем RESP_504_GATEWAY_TIMEOUT и связанный с ним код
-        sed -i '/RESP_504_GATEWAY_TIMEOUT/,/;/d' httpproxy.c
-        # Также удаляем любые использования этой переменной
-        sed -i '/RESP_504_GATEWAY_TIMEOUT/d' httpproxy.c
-        log "Удален неиспользуемый RESP_504_GATEWAY_TIMEOUT"
-    fi
-}
-
 # Проверяем, что прокси скомпилирован
 if [ ! -f "$PROXY_BIN" ]; then
     log "Прокси не найден, компилирую..."
