@@ -117,8 +117,6 @@ void extract_port_from_request(const char *request, int *port) {
     if (*port <= 0 || *port > 65535) {
         *port = DEFAULT_PROXY_PORT;  // Невалидный порт → по умолчанию
     }
-    
-    return;
 }
 
 // Функция для нормализации запроса до HTTP/1.0
